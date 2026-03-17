@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Long-Horizon Tasks | Collinear AI</title>
+<meta name="description" content="A benchmark for evaluating AI agents on complex, multi-step organizational scenarios with rich persona interactions, task dependencies, and dual evaluation.">
+<style>
+:root {
+  --orange: #F26125; --orange-light: #FFF3EC; --orange-dark: #C94E1A;
+  --green: #34C759; --green-bg: #E8F8EE; --green-dark: #248A3D;
+  --red: #FF3B30; --red-bg: #FFF0EF;
+  --blue: #007AFF; --blue-bg: #EEF4FF;
+  --purple: #AF52DE; --purple-bg: #F5EEFA;
+  --teal: #5AC8FA; --teal-bg: #E8F8FD;
+  --amber: #FF9500; --amber-bg: #FFF5E6;
+  --indigo: #5856D6; --indigo-bg: #EEEEFB;
+  --g50: #FAFAFA; --g100: #F5F5F5; --g150: #EFEFEF; --g200: #E5E5E5;
+  --g300: #D4D4D4; --g400: #A3A3A3; --g500: #737373; --g600: #525252;
+  --g700: #404040; --g800: #262626; --g900: #171717;
+  --radius: 8px; --radius-lg: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: white; color: var(--g900); line-height: 1.6; }
+a { color: var(--orange); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code { font-family: 'SF Mono', Menlo, monospace; font-size: 0.9em; background: var(--g100); padding: 2px 6px; border-radius: 4px; }
+
+/* === NAV === */
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--g200); }
+.nav-inner { max-width: 1120px; margin: 0 auto; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+.nav-brand { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; color: var(--g900); }
+.nav-brand svg { flex-shrink: 0; }
+.nav-links { display: flex; gap: 24px; align-items: center; }
+.nav-links a { font-size: 14px; font-weight: 500; color: var(--g600); transition: color .15s; }
+.nav-links a:hover { color: var(--orange); text-decoration: none; }
+.nav-links .gh-btn { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 8px; border: 1.5px solid var(--g300); font-size: 13px; font-weight: 600; color: var(--g700); transition: all .15s; }
+.nav-links .gh-btn:hover { border-color: var(--orange); color: var(--orange); }
+.nav-links .gh-btn svg { width: 16px; height: 16px; }
+
+/* === HERO === */
+.hero { padding: 140px 24px 80px; text-align: center; background: linear-gradient(180deg, var(--orange-light) 0%, white 100%); }
+.hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; border-radius: 20px; background: white; border: 1px solid var(--g200); font-size: 12px; font-weight: 600; color: var(--g600); margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.hero h1 { font-size: clamp(36px, 6vw, 56px); font-weight: 800; letter-spacing: -1.5px; line-height: 1.1; color: var(--g900); max-width: 800px; margin: 0 auto 20px; }
+.hero h1 span { color: var(--orange); }
+.hero p { font-size: 18px; color: var(--g600); max-width: 640px; margin: 0 auto 32px; line-height: 1.7; }
+.hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; }
+.btn-primary { background: var(--orange); color: white; }
+.btn-primary:hover { background: var(--orange-dark); text-decoration: none; color: white; }
+.btn-secondary { background: white; color: var(--g700); border: 1.5px solid var(--g300); }
+.btn-secondary:hover { border-color: var(--orange); color: var(--orange); text-decoration: none; }
+
+/* === SECTIONS === */
+.section { padding: 80px 24px; }
+.section-alt { background: var(--g50); }
+.container { max-width: 1120px; margin: 0 auto; }
+.section-header { text-align: center; margin-bottom: 48px; }
+.section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--orange); margin-bottom: 12px; }
+.section-title { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; color: var(--g900); margin-bottom: 12px; }
+.section-desc { font-size: 16px; color: var(--g500); max-width: 600px; margin: 0 auto; }
+
+/* === STATS === */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: -40px; position: relative; z-index: 1; }
+.stat-card { background: white; border-radius: var(--radius-lg); border: 1px solid var(--g200); padding: 24px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.stat-val { font-size: 32px; font-weight: 800; color: var(--orange); }
+.stat-label { font-size: 13px; color: var(--g500); margin-top: 4px; font-weight: 500; }
+
+/* === FEATURES === */
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.feature-card { background: white; border: 1px solid var(--g200); border-radius: var(--radius-lg); padding: 28px; transition: all .2s; }
+.feature-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); border-color: var(--g300); }
+.feature-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.feature-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.feature-card p { font-size: 14px; color: var(--g600); line-height: 1.7; }
+
+/* === SCENARIOS === */
+.scenario-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.scenario-card { background: white; border: 1px solid var(--g200); border-radius: var(--radius-lg); overflow: hidden; transition: all .2s; }
+.scenario-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.scenario-banner { padding: 32px 28px 24px; }
+.scenario-banner h3 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.scenario-banner p { font-size: 14px; opacity: 0.85; }
+.scenario-body { padding: 24px 28px 28px; }
+.scenario-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.scenario-tag { display: inline-flex; padding: 3px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; }
+.scenario-desc { font-size: 14px; color: var(--g600); line-height: 1.7; margin-bottom: 20px; }
+
+/* Persona chips */
+.persona-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.persona-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 16px; background: var(--g100); font-size: 12px; font-weight: 500; color: var(--g700); }
+.persona-dot { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: white; flex-shrink: 0; }
+
+/* Task list */
+.task-list { margin-top: 16px; }
+.task-phase { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; margin: 12px 0 6px; padding-left: 2px; }
+.task-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; color: var(--g700); }
+.task-id { font-family: 'SF Mono', Menlo, monospace; font-size: 11px; font-weight: 700; width: 28px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 4px; color: white; flex-shrink: 0; }
+
+/* === DAG DIAGRAM === */
+.dag-section { margin-top: 20px; padding: 20px; background: var(--g50); border-radius: var(--radius-lg); border: 1px solid var(--g200); }
+.dag-section h4 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--g500); margin-bottom: 16px; }
+.dag-mermaid { text-align: center; overflow-x: auto; }
+.dag-mermaid pre { display: inline-block; text-align: left; font-family: 'SF Mono', Menlo, monospace; font-size: 12px; color: var(--g600); line-height: 1.6; }
+
+/* === EVAL FRAMEWORK === */
+.eval-cols { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.eval-card { background: white; border: 1px solid var(--g200); border-radius: var(--radius-lg); padding: 28px; }
+.eval-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.eval-card .eval-sub { font-size: 14px; color: var(--g500); margin-bottom: 16px; }
+.eval-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--g150); }
+.eval-item:last-child { border-bottom: none; }
+.eval-check { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; margin-top: 1px; }
+.eval-item .eval-text { font-size: 13px; color: var(--g700); line-height: 1.6; }
+.eval-item strong { color: var(--g900); }
+
+/* === RUBRIC DIMENSIONS === */
+.dim-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
+.dim-pill { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: var(--radius); border: 1px solid var(--g200); background: white; font-size: 13px; font-weight: 500; color: var(--g700); }
+.dim-pill .dp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* === GETTING STARTED === */
+.gs-steps { display: flex; flex-direction: column; gap: 16px; max-width: 700px; margin: 0 auto; }
+.gs-step { display: flex; gap: 16px; align-items: flex-start; padding: 20px; border-radius: var(--radius-lg); border: 1px solid var(--g200); background: white; }
+.gs-num { width: 32px; height: 32px; border-radius: 50%; background: var(--orange); color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+.gs-step h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.gs-step p { font-size: 14px; color: var(--g600); }
+.gs-step code { font-size: 12px; }
+
+/* === FOOTER === */
+.footer { padding: 40px 24px; border-top: 1px solid var(--g200); text-align: center; }
+.footer p { font-size: 13px; color: var(--g400); }
+.footer a { color: var(--g500); font-weight: 500; }
+.footer a:hover { color: var(--orange); }
+
+/* === MOBILE === */
+@media (max-width: 768px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .features-grid { grid-template-columns: 1fr; }
+  .scenario-cards { grid-template-columns: 1fr; }
+  .eval-cols { grid-template-columns: 1fr; }
+  .dim-grid { grid-template-columns: 1fr; }
+  .nav-links a:not(.gh-btn) { display: none; }
+  .hero { padding: 100px 20px 60px; }
+  .section { padding: 48px 20px; }
+}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--g300); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="7" fill="#F26125"/>
+        <path d="M7 14h4l2-5 3 10 2-5h3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Long-Horizon Tasks
+    </div>
+    <div class="nav-links">
+      <a href="#scenarios">Scenarios</a>
+      <a href="#evaluation">Evaluation</a>
+      <a href="#getting-started">Get Started</a>
+      <a href="https://github.com/collinear-ai/long-horizon-tasks" class="gh-btn">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge"><span class="dot"></span> Open-source benchmark</div>
+  <h1>Evaluate AI Agents on <span>Long-Horizon</span> Organizational Tasks</h1>
+  <p>Complex, multi-step scenarios with rich persona interactions, task dependencies, and dual evaluation. Test whether your agent can navigate real organizational dynamics.</p>
+  <div class="hero-actions">
+    <a href="https://github.com/collinear-ai/long-horizon-tasks" class="btn btn-primary">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      View on GitHub
+    </a>
+    <a href="#scenarios" class="btn btn-secondary">Explore scenarios</a>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="container">
+  <div class="stats">
+    <div class="stat-card"><div class="stat-val">2</div><div class="stat-label">Scenarios</div></div>
+    <div class="stat-card"><div class="stat-val">24</div><div class="stat-label">Tasks (12 per scenario)</div></div>
+    <div class="stat-card"><div class="stat-val">14</div><div class="stat-label">Rich Personas</div></div>
+    <div class="stat-card"><div class="stat-val">2</div><div class="stat-label">Eval Tracks (Programmatic + Rubric)</div></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">What makes this different</div>
+      <div class="section-title">Beyond single-turn benchmarks</div>
+      <div class="section-desc">Real organizations are messy. These scenarios test whether agents can handle the ambiguity, politics, and coordination that define actual work.</div>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon" style="background:var(--orange-light)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <h3>Rich Personas</h3>
+        <p>Each persona has a detailed background, communication style, decision-making patterns, timezone, tool preferences, and interpersonal dynamics. Agents must adapt tone, channel, and timing to each person.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:var(--blue-bg)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
+        </div>
+        <h3>Task DAGs</h3>
+        <p>Tasks form directed acyclic graphs with real dependencies. Agents must respect execution order, parallelize where possible, and handle blockers that cascade through the project.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:var(--green-bg)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h3>Dual Evaluation</h3>
+        <p>Programmatic verifiers check procedural correctness (right channel, right time, required fields). Rubrics assess strategic awareness, persona fidelity, and organizational savvy on a 1&ndash;5 scale.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:var(--purple-bg)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <h3>Multi-Tool Environments</h3>
+        <p>Agents operate across Slack, email, calendars, Jira, Salesforce, DocuSign, AWS, and more. Each tool has constraints &mdash; some personas refuse Slack for sensitive topics, others only respond via email.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:var(--amber-bg)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h3>Political Navigation</h3>
+        <p>Scenarios embed real tensions: Sales vs. Engineering priorities, clinical staff vs. IT timelines, compliance constraints vs. speed. Agents must navigate these diplomatically.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:var(--teal-bg)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        </div>
+        <h3>Timezone & Scheduling</h3>
+        <p>Personas span multiple timezones with non-overlapping windows. Agents must reason about availability, working hours, and channel preferences to find feasible meeting slots.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCENARIOS -->
+<section class="section section-alt" id="scenarios">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Scenarios</div>
+      <div class="section-title">Two high-stakes organizational settings</div>
+      <div class="section-desc">Each scenario places the agent as a coordination assistant in a realistic multi-week project with complex stakeholder dynamics.</div>
+    </div>
+    <div class="scenario-cards">
+
+      <!-- SCENARIO 1 -->
+      <div class="scenario-card">
+        <div class="scenario-banner" style="background: linear-gradient(135deg, #1a365d 0%, #2d5ca0 100%); color: white;">
+          <h3>Cerulean Analytics</h3>
+          <p>Q1 Quarterly Business Review</p>
+        </div>
+        <div class="scenario-body">
+          <div class="scenario-meta">
+            <span class="scenario-tag" style="background:var(--blue-bg);color:var(--blue);">B2B SaaS</span>
+            <span class="scenario-tag" style="background:var(--green-bg);color:var(--green-dark);">$45M ARR</span>
+            <span class="scenario-tag" style="background:var(--purple-bg);color:var(--purple);">10 business days</span>
+            <span class="scenario-tag" style="background:var(--amber-bg);color:var(--amber);">12 tasks</span>
+          </div>
+          <div class="scenario-desc">
+            Coordinate the preparation and execution of a board-facing QBR for a Series C data-observability company. The agent acts as executive assistant to the VP of Sales, gathering data from revenue ops, customer success, product marketing, and engineering &mdash; then producing a polished deck, managing a prep meeting, and handling post-QBR follow-up.
+          </div>
+          <div style="font-size:12px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">8 Personas</div>
+          <div class="persona-row">
+            <span class="persona-chip"><span class="persona-dot" style="background:#F26125">RW</span>Rachel Whitford <span style="color:var(--g400)">&middot; VP Sales</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#5856D6">LS</span>Lena Str&ouml;m <span style="color:var(--g400)">&middot; CRO</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#007AFF">MT</span>Marcus Tan-Ohara <span style="color:var(--g400)">&middot; CFO</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#34C759">PN</span>Priya Narayanan <span style="color:var(--g400)">&middot; Head of CS</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#FF9500">DF</span>Diego Fuentes-R&iacute;os <span style="color:var(--g400)">&middot; Product Marketing</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#5AC8FA">KW</span>Kenji Watanabe <span style="color:var(--g400)">&middot; Sales Ops</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#AF52DE">SO</span>Siobh&aacute;n O'Malley <span style="color:var(--g400)">&middot; Enterprise AE</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#FF3B30">TR</span>Tom&aacute;s Rezende <span style="color:var(--g400)">&middot; VP Eng</span></span>
+          </div>
+          <div class="task-list">
+            <div class="task-phase" style="color:#2d5ca0">Level 0 &mdash; Data Gathering</div>
+            <div class="task-row"><span class="task-id" style="background:#4A90D9">T1</span> Pull Revenue & Pipeline Metrics</div>
+            <div class="task-row"><span class="task-id" style="background:#4A90D9">T2</span> Collect Customer Health Scores</div>
+            <div class="task-row"><span class="task-id" style="background:#4A90D9">T3</span> Gather Product Roadmap Highlights</div>
+            <div class="task-row"><span class="task-id" style="background:#4A90D9">T4</span> Compile Competitive Intelligence</div>
+            <div class="task-row"><span class="task-id" style="background:#4A90D9">T6</span> Schedule QBR Prep Meeting</div>
+            <div class="task-phase" style="color:#F5A623">Levels 1&ndash;2 &mdash; Preparation</div>
+            <div class="task-row"><span class="task-id" style="background:#F5A623">T5</span> Draft QBR Presentation Deck</div>
+            <div class="task-row"><span class="task-id" style="background:#F5A623">T7</span> Circulate Pre-Read Materials</div>
+            <div class="task-phase" style="color:#7B68EE">Levels 3&ndash;4 &mdash; Refinement</div>
+            <div class="task-row"><span class="task-id" style="background:#7B68EE">T8</span> Prep Meeting Follow-Up</div>
+            <div class="task-row"><span class="task-id" style="background:#7B68EE">T9</span> Finalize QBR Deck</div>
+            <div class="task-phase" style="color:#D0021B">Levels 4&ndash;5 &mdash; Execution</div>
+            <div class="task-row"><span class="task-id" style="background:#D0021B">T10</span> Send QBR Calendar Invite</div>
+            <div class="task-row"><span class="task-id" style="background:#D0021B">T11</span> Executive Pre-Brief to Lena</div>
+            <div class="task-row"><span class="task-id" style="background:#D0021B">T12</span> Post-QBR Action Items</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENARIO 2 -->
+      <div class="scenario-card">
+        <div class="scenario-banner" style="background: linear-gradient(135deg, #1a4731 0%, #2d8a5e 100%); color: white;">
+          <h3>Pinnacle Health Systems</h3>
+          <p>CloudRad Vendor Migration</p>
+        </div>
+        <div class="scenario-body">
+          <div class="scenario-meta">
+            <span class="scenario-tag" style="background:var(--green-bg);color:var(--green-dark);">Healthcare</span>
+            <span class="scenario-tag" style="background:var(--red-bg);color:var(--red);">HIPAA / HITRUST</span>
+            <span class="scenario-tag" style="background:var(--purple-bg);color:var(--purple);">14 weeks</span>
+            <span class="scenario-tag" style="background:var(--amber-bg);color:var(--amber);">12 tasks</span>
+          </div>
+          <div class="scenario-desc">
+            Coordinate the migration from a legacy on-premise RIS to a cloud-native platform across 6 hospitals and 8 imaging centers. The agent acts as operational coordinator for the IT Operations Lead, managing security reviews, compliance (HIPAA, HITRUST, 42 CFR Part 2), stakeholder communication, UAT, and a weekend production go-live.
+          </div>
+          <div style="font-size:12px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">6+ Personas</div>
+          <div class="persona-row">
+            <span class="persona-chip"><span class="persona-dot" style="background:#007AFF">AB</span>Ananya Bhatt <span style="color:var(--g400)">&middot; IT Ops Lead</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#FF3B30">FD</span>Frank Dobrowski <span style="color:var(--g400)">&middot; CISO</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#34C759">YA</span>Dr. Yvonne Achebe <span style="color:var(--g400)">&middot; CMIO</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#FF9500">HS</span>Hector Salinas-Vega <span style="color:var(--g400)">&middot; Procurement</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#AF52DE">SL</span>Dr. Stefan Lindqvist <span style="color:var(--g400)">&middot; Chief of Radiology</span></span>
+            <span class="persona-chip"><span class="persona-dot" style="background:#5AC8FA">MP</span>Min-Ji Park <span style="color:var(--g400)">&middot; IT Technical Lead</span></span>
+          </div>
+          <div class="task-list">
+            <div class="task-phase" style="color:#2E86AB">Phase 1 &mdash; Readiness & Approvals</div>
+            <div class="task-row"><span class="task-id" style="background:#2E86AB">T1</span> Vendor Security Questionnaire Review</div>
+            <div class="task-row"><span class="task-id" style="background:#2E86AB">T2</span> Data Schema Mapping</div>
+            <div class="task-row"><span class="task-id" style="background:#2E86AB">T3</span> Stakeholder Kickoff Meeting</div>
+            <div class="task-row"><span class="task-id" style="background:#A23B72">T4</span> BAA Execution</div>
+            <div class="task-row"><span class="task-id" style="background:#A23B72">T8</span> Draft Communication Plan</div>
+            <div class="task-phase" style="color:#F18F01">Phase 2 &mdash; Staging & Testing</div>
+            <div class="task-row"><span class="task-id" style="background:#F18F01">T5</span> Provision Staging Environment</div>
+            <div class="task-row"><span class="task-id" style="background:#F18F01">T6</span> Test Data Migration (Staging)</div>
+            <div class="task-row"><span class="task-id" style="background:#F18F01">T7</span> User Acceptance Testing</div>
+            <div class="task-phase" style="color:#C73E1D">Phase 3 &mdash; Go-Live & Stabilization</div>
+            <div class="task-row"><span class="task-id" style="background:#C73E1D">T9</span> Schedule Go-Live Window</div>
+            <div class="task-row"><span class="task-id" style="background:#C73E1D">T10</span> Execute Production Migration</div>
+            <div class="task-row"><span class="task-id" style="background:#C73E1D">T11</span> Post-Migration Validation</div>
+            <div class="task-row"><span class="task-id" style="background:#C73E1D">T12</span> Go-Live Confirmation & Handoff</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KEY TENSIONS -->
+    <div style="margin-top:48px">
+      <div style="text-align:center;margin-bottom:24px">
+        <div class="section-label">Built-in tensions</div>
+        <div style="font-size:20px;font-weight:700;color:var(--g900)">Agents must navigate real organizational dynamics</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;">
+        <div style="display:flex;gap:12px;padding:16px;border:1px solid var(--g200);border-radius:var(--radius-lg);background:white;">
+          <div style="width:36px;height:36px;border-radius:8px;background:var(--red-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </div>
+          <div><div style="font-size:14px;font-weight:600;margin-bottom:2px">Sales vs. Engineering</div><div style="font-size:13px;color:var(--g600)">Feature prioritization conflicts. Product ships features that don't align with competitive deals. VP Eng resists sales pressure on the roadmap.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;padding:16px;border:1px solid var(--g200);border-radius:var(--radius-lg);background:white;">
+          <div style="width:36px;height:36px;border-radius:8px;background:var(--amber-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          </div>
+          <div><div style="font-size:14px;font-weight:600;margin-bottom:2px">Retention vs. Expansion</div><div style="font-size:13px;color:var(--g600)">CS head focuses on at-risk accounts while CRO pushes expansion revenue. NRR is 6 points below target. Both perspectives need airtime in the QBR.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;padding:16px;border:1px solid var(--g200);border-radius:var(--radius-lg);background:white;">
+          <div style="width:36px;height:36px;border-radius:8px;background:var(--purple-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div><div style="font-size:14px;font-weight:600;margin-bottom:2px">Compliance vs. Speed</div><div style="font-size:13px;color:var(--g600)">CISO requires encrypted-email-only for security topics. Legal review takes 3 weeks. HITRUST deadline creates urgency. PHI handling adds complexity to every step.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;padding:16px;border:1px solid var(--g200);border-radius:var(--radius-lg);background:white;">
+          <div style="width:36px;height:36px;border-radius:8px;background:var(--blue-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+          </div>
+          <div><div style="font-size:14px;font-weight:600;margin-bottom:2px">Clinical vs. IT Priorities</div><div style="font-size:13px;color:var(--g600)">Chief of Radiology resists testing disruption. CMIO bridges clinical-technical gap. Migration cannot block patient care. Weekend go-live windows are the only option.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EVALUATION -->
+<section class="section" id="evaluation">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Evaluation Framework</div>
+      <div class="section-title">Two complementary evaluation tracks</div>
+      <div class="section-desc">Each task is scored both programmatically (did the agent do the right things?) and via rubric (did the agent do them well?).</div>
+    </div>
+    <div class="eval-cols">
+      <div class="eval-card">
+        <h3 style="color:var(--blue)">Programmatic Verifiers</h3>
+        <div class="eval-sub">Automated pass/fail checks implemented in Python</div>
+        <div class="eval-item">
+          <div class="eval-check" style="background:var(--blue-bg);color:var(--blue)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="eval-text"><strong>Boolean checks</strong> &mdash; Did the action occur? Was the right channel used? Was the deadline included?</div>
+        </div>
+        <div class="eval-item">
+          <div class="eval-check" style="background:var(--blue-bg);color:var(--blue)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="eval-text"><strong>Checklist validations</strong> &mdash; Were all required data points present? All attachments included?</div>
+        </div>
+        <div class="eval-item">
+          <div class="eval-check" style="background:var(--blue-bg);color:var(--blue)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="eval-text"><strong>Timing checks</strong> &mdash; Sent during working hours? Respected timezone? Met the 48-hour pre-read window?</div>
+        </div>
+        <div class="eval-item">
+          <div class="eval-check" style="background:var(--blue-bg);color:var(--blue)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="eval-text"><strong>Compliance flags</strong> &mdash; PHI de-identified before staging? Encrypted email for security topics? BAA signed before provisioning?</div>
+        </div>
+      </div>
+      <div class="eval-card">
+        <h3 style="color:var(--orange)">Rubric-Based Evaluation</h3>
+        <div class="eval-sub">1&ndash;5 scale for qualitative assessment (human or LLM-as-judge)</div>
+        <div class="eval-item">
+          <div class="eval-check" style="background:var(--orange-light);color:var(--orange)">5</div>
+          <div class="eval-text"><strong>Exceptional</strong> &mdash; Demonstrates deep understanding of personas and context</div>
+        </div>
+        <div class="eval-item">
+          <div class="eval-check" style="background:var(--orange-light);color:var(--orange)">4</div>
+          <div class="eval-text"><strong>Exceeds expectations</strong> &mdash; Strong execution with attention to detail</div>
+        </div>
+        <div class="eval-item">
+          <div class="eval-check" style="background:var(--orange-light);color:var(--orange)">3</div>
+          <div class="eval-text"><strong>Meets expectations</strong> &mdash; Satisfactory completion with minor gaps</div>
+        </div>
+        <div class="eval-item">
+          <div class="eval-check" style="background:var(--amber-bg);color:var(--amber)">2</div>
+          <div class="eval-text"><strong>Below expectations</strong> &mdash; Partially meets the requirement with significant gaps</div>
+        </div>
+        <div class="eval-item">
+          <div class="eval-check" style="background:var(--red-bg);color:var(--red)">1</div>
+          <div class="eval-text"><strong>Unacceptable</strong> &mdash; Fails the requirement or introduces a problem</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RUBRIC DIMENSIONS -->
+    <div style="margin-top:48px;text-align:center">
+      <div style="font-size:18px;font-weight:700;margin-bottom:6px">Rubric Dimensions</div>
+      <div style="font-size:14px;color:var(--g500);margin-bottom:20px">Per-task and global dimensions evaluate different aspects of agent behavior</div>
+      <div class="dim-grid">
+        <div class="dim-pill"><span class="dp-dot" style="background:var(--orange)"></span> Persona Fidelity</div>
+        <div class="dim-pill"><span class="dp-dot" style="background:var(--blue)"></span> Content Quality & Accuracy</div>
+        <div class="dim-pill"><span class="dp-dot" style="background:var(--green)"></span> Communication Appropriateness</div>
+        <div class="dim-pill"><span class="dp-dot" style="background:var(--purple)"></span> Political / Organizational Navigation</div>
+        <div class="dim-pill"><span class="dp-dot" style="background:var(--red)"></span> DAG Execution Order</div>
+        <div class="dim-pill"><span class="dp-dot" style="background:var(--teal)"></span> Tool Selection Appropriateness</div>
+        <div class="dim-pill"><span class="dp-dot" style="background:var(--amber)"></span> Compliance & Regulatory Awareness</div>
+        <div class="dim-pill"><span class="dp-dot" style="background:var(--indigo)"></span> Scheduling & Timezone Reasoning</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STRUCTURE -->
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">What's included</div>
+      <div class="section-title">Each scenario ships with 4 files</div>
+    </div>
+    <div class="features-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="feature-card" style="text-align:center">
+        <div style="font-size:28px;margin-bottom:12px">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <h3 style="font-size:14px">project_dag.md</h3>
+        <p style="font-size:13px">Task specifications, dependency graph, communication requirements, and constraints for all 12 tasks</p>
+      </div>
+      <div class="feature-card" style="text-align:center">
+        <div style="font-size:28px;margin-bottom:12px">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <h3 style="font-size:14px">personas.yaml</h3>
+        <p style="font-size:13px">Detailed profiles with background, communication style, decision patterns, KPIs, relationships, and blind spots</p>
+      </div>
+      <div class="feature-card" style="text-align:center">
+        <div style="font-size:28px;margin-bottom:12px">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h3 style="font-size:14px">rubrics.yaml</h3>
+        <p style="font-size:13px">Per-task rubric criteria with scoring guidelines (1&ndash;5) for persona fidelity, content quality, and more</p>
+      </div>
+      <div class="feature-card" style="text-align:center">
+        <div style="font-size:28px;margin-bottom:12px">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <h3 style="font-size:14px">verifiers.py</h3>
+        <p style="font-size:13px">Python implementation of programmatic pass/fail checks with typed dataclasses and persona-aware validation</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GETTING STARTED -->
+<section class="section" id="getting-started">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Getting started</div>
+      <div class="section-title">Run the benchmark</div>
+    </div>
+    <div class="gs-steps">
+      <div class="gs-step">
+        <div class="gs-num">1</div>
+        <div>
+          <h4>Clone the repository</h4>
+          <p><code>git clone https://github.com/collinear-ai/long-horizon-tasks.git</code></p>
+        </div>
+      </div>
+      <div class="gs-step">
+        <div class="gs-num">2</div>
+        <div>
+          <h4>Pick a scenario</h4>
+          <p>Choose <code>scenario_1_cerulean_qbr/</code> (B2B SaaS) or <code>scenario_2_pinnacle_migration/</code> (Healthcare IT). Read the <code>project_dag.md</code> for the full task specification.</p>
+        </div>
+      </div>
+      <div class="gs-step">
+        <div class="gs-num">3</div>
+        <div>
+          <h4>Feed the context to your agent</h4>
+          <p>Provide the project DAG, personas, and tool access to your agent. The scenario files define the complete environment.</p>
+        </div>
+      </div>
+      <div class="gs-step">
+        <div class="gs-num">4</div>
+        <div>
+          <h4>Evaluate with dual scoring</h4>
+          <p>Run <code>verifiers.py</code> for programmatic checks. Use <code>rubrics.yaml</code> for human or LLM-as-judge evaluation on the 1&ndash;5 scale.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">
+      <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="7" fill="#F26125"/>
+        <path d="M7 14h4l2-5 3 10 2-5h3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span style="font-size:14px;font-weight:700;color:var(--g700)">Collinear AI</span>
+    </div>
+    <p>Long-Horizon Tasks is open source. <a href="https://github.com/collinear-ai/long-horizon-tasks">View on GitHub</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
